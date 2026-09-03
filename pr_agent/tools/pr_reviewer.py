@@ -211,6 +211,9 @@ class PRReviewer:
             pr_review = self._prepare_pr_review()
             get_logger().debug("PR output", artifact=pr_review)
 
+            if not pr_review:
+                raise ValueError("Failed to prepare review output")
+
             should_publish = get_settings().config.publish_output and self._should_publish_review_no_suggestions(pr_review)
             if not should_publish:
                 reason = "Review output is not published"
@@ -385,11 +388,11 @@ class PRReviewer:
         the feedback.
         """
         data = self.prediction_data if self.prediction_data is not None else self._load_review_yaml(self.prediction)
-        github_action_output(data, 'review')
-
-        if 'review' not in data:
+        if not isinstance(data, dict) or not isinstance(data.get('review'), dict) or not data['review']:
             get_logger().exception("Failed to parse review data", artifact={"data": data})
             return ""
+
+        github_action_output(data, 'review')
 
         structured_publisher = getattr(self.git_provider, "publish_structured_review", None)
         if callable(structured_publisher):
